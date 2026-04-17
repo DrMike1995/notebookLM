@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NotebookLM – AI-Verktyg Projekt</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161e;
+    --surface2: #1a1e28;
+    --border: #232738;
+    --accent: #5b8aff;
+    --accent2: #a78bfa;
+    --accent3: #34d399;
+    --text: #e8eaf0;
+    --muted: #8890a4;
+    --tag-bg: #1e2336;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.4;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    position: relative;
+    padding: 4rem 2rem;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 700px;
+    height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(91,138,255,0.12) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: pulse 6s ease-in-out infinite;
+  }
+
+  .hero-glow2 {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(167,139,250,0.08) 0%, transparent 70%);
+    top: 30%;
+    right: 10%;
+    animation: pulse 8s ease-in-out infinite reverse;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    50% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.7; }
+  }
+
+  .hero-inner { position: relative; z-index: 1; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.4rem 1rem;
+    border-radius: 2rem;
+    margin-bottom: 2rem;
+    animation: fadeUp 0.8s ease both;
+  }
+
+  .badge .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent3);
+    animation: blink 2s infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(3rem, 8vw, 7rem);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    animation: fadeUp 0.8s 0.1s ease both;
+  }
+
+  h1 .highlight {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 1.1rem;
+    color: var(--muted);
+    max-width: 480px;
+    margin: 1.5rem auto 0;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+
+  .hero-meta {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 3rem;
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+
+  .hero-meta-item {
+    text-align: center;
+  }
+
+  .hero-meta-item .label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .hero-meta-item .value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.1em;
+    animation: fadeUp 1s 0.6s ease both;
+  }
+
+  .scroll-line {
+    width: 1px;
+    height: 40px;
+    background: linear-gradient(to bottom, var(--muted), transparent);
+    animation: scrollDown 1.5s ease infinite;
+  }
+
+  @keyframes scrollDown { 0%{opacity:0;transform:scaleY(0);transform-origin:top} 50%{opacity:1;transform:scaleY(1)} 100%{opacity:0;transform:scaleY(1);transform-origin:bottom} }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(20px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* ── LAYOUT ── */
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* ── SECTION ── */
+  section {
+    padding: 6rem 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+
+  h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 1.5rem;
+  }
+
+  p { color: var(--muted); margin-bottom: 1rem; }
+  p strong { color: var(--text); font-weight: 500; }
+
+  /* ── TOOL CARD ── */
+  .tool-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .tool-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #1a73e8, #4285f4);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    font-size: 1.8rem;
+  }
+
+  .tool-info h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+
+  .tool-info a {
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    text-decoration: none;
+    letter-spacing: 0.05em;
+  }
+
+  .tool-info a:hover { text-decoration: underline; }
+
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .tag {
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    padding: 0.25rem 0.7rem;
+    border-radius: 2rem;
+  }
+
+  /* ── FEATURES GRID ── */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .feature-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1.25rem 1.5rem;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .feature-item:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .feature-item .fi-icon { font-size: 1.4rem; margin-bottom: 0.5rem; }
+
+  .feature-item .fi-title {
+    font-weight: 500;
+    color: var(--text);
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .feature-item .fi-desc {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 0;
+  }
+
+  /* ── STEPS ── */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 2rem;
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 1.25rem;
+    position: relative;
+  }
+
+  .step:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 23px;
+    top: 48px;
+    bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+
+  .step-num {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    display: grid;
+    place-items: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--accent);
+    flex-shrink: 0;
+    z-index: 1;
+  }
+
+  .step-body {
+    padding-bottom: 2rem;
+  }
+
+  .step-body h4 {
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+  }
+
+  .step-body p { margin: 0; font-size: 0.9rem; }
+
+  /* ── ANALYSIS CARDS ── */
+  .analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  @media (max-width: 600px) { .analysis-grid { grid-template-columns: 1fr; } }
+
+  .analysis-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+  }
+
+  .analysis-card.full { grid-column: 1 / -1; }
+
+  .analysis-card .ac-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+
+  .analysis-card.good .ac-label { color: var(--accent3); }
+  .analysis-card.bad .ac-label { color: #fb7185; }
+  .analysis-card.neutral .ac-label { color: var(--accent); }
+  .analysis-card.target .ac-label { color: var(--accent2); }
+
+  .analysis-card h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .analysis-card p { font-size: 0.88rem; margin: 0; }
+
+  /* ── PRICING ── */
+  .pricing-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .price-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+
+  .price-card:hover { border-color: var(--accent2); }
+
+  .price-card.free { border-color: var(--accent3); }
+
+  .price-card .tier {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .price-card .price {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .price-card .price span { font-size: 0.85rem; color: var(--muted); font-family: 'DM Sans'; }
+
+  .price-card.free .price { color: var(--accent3); }
+
+  .price-card p { font-size: 0.78rem; margin-top: 0.5rem; margin-bottom: 0; }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 3rem 0;
+    text-align: center;
+  }
+
+  footer p {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin: 0;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── QUOTE ── */
+  blockquote {
+    border-left: 3px solid var(--accent);
+    padding: 1rem 1.5rem;
+    background: var(--surface);
+    border-radius: 0 0.75rem 0.75rem 0;
+    margin: 1.5rem 0;
+    font-style: italic;
+    color: var(--text);
+  }
+
+  blockquote cite {
+    display: block;
+    margin-top: 0.5rem;
+    font-style: normal;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+  <div class="hero-inner">
+    <div class="badge"><span class="dot"></span> AI-Verktyg Projekt · VT 2026</div>
+    <h1>Notebook<span class="highlight">LM</span></h1>
+    <p class="hero-sub">Googles AI-drivna studieverktyg som håller sig strikt till ditt eget källmaterial – utan att hitta på.</p>
+    <div class="hero-meta">
+      <div class="hero-meta-item">
+        <div class="label">Utvecklare</div>
+        <div class="value">Google</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="label">Lanserat</div>
+        <div class="value">Juli 2023</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="label">Modell</div>
+        <div class="value">Gemini 2.0</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="label">Pris</div>
+        <div class="value">Gratis</div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <span>SCROLLA NED</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- ALLMÄN BESKRIVNING -->
+<section>
+  <div class="container">
+    <div class="section-label">01 — Allmän beskrivning</div>
+    <h2>Vad är NotebookLM?</h2>
+
+    <div class="tool-card">
+      <div class="tool-icon">📓</div>
+      <div class="tool-info">
+        <h3>NotebookLM</h3>
+        <a href="https://notebooklm.google.com" target="_blank">notebooklm.google.com ↗</a>
+        <div class="tag-row">
+          <span class="tag">Google</span>
+          <span class="tag">Gemini 2.0</span>
+          <span class="tag">Källtrogen AI</span>
+          <span class="tag">Studieverktyg</span>
+          <span class="tag">Gratis</span>
+        </div>
+      </div>
+    </div>
+
+    <p>NotebookLM är ett <strong>AI-drivet studieverktyg från Google</strong> som enbart arbetar utifrån det källmaterial du själv laddar upp – exempelvis PDF:er, anteckningar, Google Docs eller kopierad text. Det innebär att AI:n inte söker upp eller hittar på information utifrån, utan håller sig strikt till det du har länkat. Det gör verktyget unikt jämfört med de flesta andra AI-chattar, som kan "hallucinera" och presentera felaktig information med stor säkerhet.</p>
+
+    <p>Modellen lanserades den <strong>12 juli 2023</strong> och var från start ett experiment inom Googles Labs-avdelning. Två år senare, 2025, fick verktyget en egen mobilapp och hade vid det laget vuxit till en av de mest använda AI-applikationerna för studier globalt. Under huven driver <strong>Google Gemini 2.0</strong> analysen – en av Googles mest kapabla språkmodeller – vilket gör att verktyget kan hantera långa och komplexa dokument på sekunder.</p>
+
+    <p>En av de största praktiska fördelarna är <strong>Google Drive-integrationen</strong>. Eftersom de flesta elever och studenter redan lagrar sina filer i Drive kan man ladda upp material direkt utan att behöva ladda ner och ladda upp filer manuellt. Allt hänger ihop i Googles ekosystem, vilket sparar tid och minskar friktion i studieprocessen.</p>
+
+    <p>Verktyget är designat för att vara ett <strong>personligt research-bibliotek</strong> – du kan ha flera olika "notebooks", ett per ämne eller projekt, och varje notebook håller ordning på sitt eget källmaterial och sina egna konversationer med AI:n. Det gör det lätt att hålla isär material från till exempel Matte, Historia och Engelska utan att det blandas ihop.</p>
+
+    <div class="section-label" style="margin-top:3rem;">Vad kan verktyget skapa?</div>
+    <div class="features-grid">
+      <div class="feature-item"><div class="fi-icon">🎙️</div><div class="fi-title">Ljudöversikt</div><p class="fi-desc">En poddliknande genomgång av materialet med AI-genererade röster.</p></div>
+      <div class="feature-item"><div class="fi-icon">🎬</div><div class="fi-title">Videoöversikt</div><p class="fi-desc">En kortare video (6–9 min) som går igenom materialets innehåll.</p></div>
+      <div class="feature-item"><div class="fi-icon">🗺️</div><div class="fi-title">Tankekarta</div><p class="fi-desc">Visualiserar viktiga begrepp och samband i materialet.</p></div>
+      <div class="feature-item"><div class="fi-icon">📋</div><div class="fi-title">Rapport</div><p class="fi-desc">Genererar en strukturerad sammanfattning av källmaterialet.</p></div>
+      <div class="feature-item"><div class="fi-icon">🃏</div><div class="fi-title">Frågekort</div><p class="fi-desc">Flashcard-liknande kort för aktiv repetition av nyckelbegrepp.</p></div>
+      <div class="feature-item"><div class="fi-icon">📝</div><div class="fi-title">Quiz</div><p class="fi-desc">Flervalsfrågor genererade direkt från ditt eget material.</p></div>
+      <div class="feature-item"><div class="fi-icon">📊</div><div class="fi-title">Datatabell</div><p class="fi-desc">Strukturerar information i tabellformat, t.ex. jämförelse av religioner.</p></div>
+      <div class="feature-item"><div class="fi-icon">🖼️</div><div class="fi-title">Presentation (BETA)</div><p class="fi-desc">PowerPoint-liknande presentationer med bilder genererade från materialet.</p></div>
+      <div class="feature-item"><div class="fi-icon">📈</div><div class="fi-title">Infografik (BETA)</div><p class="fi-desc">Radar upp information grafiskt för enkel överblick.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- USE CASE -->
+<section>
+  <div class="container">
+    <div class="section-label">02 — Use Case</div>
+    <h2>Hur jag använde NotebookLM</h2>
+
+    <p>Inför ett prov i religionskunskap stod jag inför ett välbekant problem: lärarens material var tillräckligt för att förstå grunderna, men inte tillräckligt djupt för att kunna resonera analytiskt på provet. Målet var att kunna svara på frågor ur <strong>flera perspektiv</strong> – psykologiskt, kulturellt och globalt – och inte bara rabbla upp fakta. Det krävde ett smartare angreppssätt än att bara läsa om samma sidor om och om igen.</p>
+
+    <p>Lösningen blev att kombinera två AI-verktyg: <strong>Claude</strong> som "djuptänkare" för att berika och fördjupa materialet, och <strong>NotebookLM</strong> som "studiecoach" för att omvandla det berikade materialet till aktiva inlärningsredskap. Tillsammans skapade de ett system som tog mig från passiv läsning till aktivt lärande.</p>
+
+    <blockquote>
+      "Tanken var att Claude skulle fylla i de analytiska hålen som läromedlet lämnade, medan NotebookLM sedan förhörde mig på resultatet – alltid med källhänvisningar så att jag visste vad som var fakta."
+      <cite>— Eget resonemang</cite>
+    </blockquote>
+
+    <div class="section-label" style="margin-top:2.5rem;">Startpunkt & mål</div>
+    <p>Utgångspunkten var lärarens länkade PDF-material om världsreligionerna. Materialet täckte de grundläggande fakta bra, men saknade det analytiska djup som krävs för högre betyg – kopplingar till psykologi, sociologi och ett globalt perspektiv på hur religion fungerar i dagens samhälle. Målet var att skapa ett pluggmaterial som inte bara svarade på <em>vad</em> utan också på <em>varför</em> och <em>hur</em>.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <h4>Fördjupningstext med Claude</h4>
+          <p>Jag gav Claude lärarens källmaterial och bad om en 6-sidig fördjupningstext om religionskunskap. Jag specificerade att texten skulle lyfta tre perspektiv utöver det faktamässiga: ett <strong>psykologiskt perspektiv</strong> (varför människor söker sig till religion), ett <strong>kulturellt perspektiv</strong> (hur religion formar normer och traditioner) och ett <strong>globalt perspektiv</strong> (religionernas roll i internationella konflikter och fredsarbete). Resultatet var en sammanhängande och analysinriktad text på exakt de ämnen som provet skulle täcka.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <h4>Konvertera till PDF</h4>
+          <p>Den genererade texten kopierades in i ett ordbehandlingsprogram och exporterades som PDF. Det här steget är nödvändigt eftersom NotebookLM arbetar bäst med strukturerade dokument. Att ha materialet i PDF-format gör också att NotebookLM kan hänvisa till specifika sidnummer när den svarar på frågor – en viktig del av källhänvisningsfunktionen.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <h4>Ladda upp i NotebookLM</h4>
+          <p>PDF:en laddades upp i ett nytt NotebookLM-projekt som jag döpte till "Religionskunskap – Prov VT26". Inom några sekunder hade verktyget analyserat hela dokumentet och presenterat en automatisk sammanfattning av de viktigaste temana. Det var imponerande hur snabbt det lyckades identifiera kärnpunkterna – de tre perspektiven som Claude hade skrivit om dök upp direkt i sammanfattningen.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-body">
+          <h4>Generera studiematerial</h4>
+          <p>Nu kom den roliga delen. Jag bad NotebookLM skapa tre typer av studiematerial: ett <strong>quiz</strong> med flervalsfrågor för att testa faktakunskaper, en <strong>podcast</strong> där två AI-röster diskuterade och förklarade materialet på ett samtalsmässigt sätt (perfekt att lyssna på under pendling), och en <strong>tankekarta</strong> som visuellt kopplade ihop begrepp som karma, nirvana, diaspora och sekularisering. Allt genererades på under en minut.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">05</div>
+        <div class="step-body">
+          <h4>Interaktivt förhör med källhänvisningar</h4>
+          <p>Det sista och viktigaste steget var att använda chattfunktionen för att ställa specifika frågor, precis som ett muntligt förhör. Frågorna jag ställde speglade provets struktur – "Hur ser islam på kvinnans roll i samhället ur ett kulturellt perspektiv?" eller "Vad säger buddhistisk psykologi om lidandets ursprung?" – och NotebookLM svarade alltid med direkthänvisning till var i PDF:en informationen finns. Det gör att man inte bara lär sig svaret, utan också <strong>vet var man kan läsa mer</strong> om man är osäker.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:2.5rem;">Slutresultat</div>
+    <p>Resultatet var ett komplett och sammanhängande pluggsystem. Quizzen hjälpte mig identifiera vilka delar jag kunde och vilka jag behövde repetera. Podcasten gav en passiv inlärningskanal när ögonen var trötta. Tankekartan skapade den mentala struktur som krävs för att hålla ihop ett komplext ämne. Och källhänvisningarna gav en trygghet – jag visste att inget var påhittat. På provet kunde jag analysera frågor med <strong>ett mer nyanserat och flerdimensionellt resonemang</strong> jämfört med om jag bara hade läst det ursprungliga läromedlet.</p>
+  </div>
+</section>
+
+<!-- ANALYS -->
+<section>
+  <div class="container">
+    <div class="section-label">03 — Slutlig analys</div>
+    <h2>Utvärdering av verktyget</h2>
+
+    <p>Efter att ha använt NotebookLM i flera ämnen under en längre period har jag en ganska nyanserad bild av vad verktyget faktiskt är bra på – och var det har sina gränser. Kort sagt: det är ett av de mest pålitliga AI-verktygen jag testat, just för att det <strong>aldrig lovar mer än det kan hålla</strong>.</p>
+
+    <div class="analysis-grid">
+      <div class="analysis-card good">
+        <div class="ac-label">✓ Styrka</div>
+        <h4>Källtrohet utan hallucination</h4>
+        <p>NotebookLM hittar inte på. Den håller sig strikt till det uppladdade materialet och pekar alltid ut var i källan informationen är hämtad. Det är en enorm trygghet jämfört med chattbotar som kan presentera felaktig information med stor säkerhet. Jag har aldrig fått ett svar som jag inte kunnat verifiera direkt i dokumentet.</p>
+      </div>
+      <div class="analysis-card good">
+        <div class="ac-label">✓ Styrka</div>
+        <h4>Bred och varierad verktygslåda</h4>
+        <p>Från podcast till quiz till tankekartor – alla studiemedel genereras automatiskt utifrån ditt eget material. Det är inte bara ett sätt att sammanfatta; det är ett helt system för varierad inlärning. Att kunna lyssna på en podd om sina egna anteckningar är genuint användbart.</p>
+      </div>
+      <div class="analysis-card good">
+        <div class="ac-label">✓ Styrka</div>
+        <h4>Sömlös Google-integration</h4>
+        <p>Eftersom de flesta redan lagrar sina skoldokument i Google Drive är integrationen en stor tidsbesparing. Inga manuella nedladdningar och uppladdningar – du hämtar filen direkt från Drive med ett klick. Dessutom synkroniseras dina notebooks automatiskt mellan enheter.</p>
+      </div>
+      <div class="analysis-card bad">
+        <div class="ac-label">— Begränsning</div>
+        <h4>Begränsat till eget material</h4>
+        <p>Verktyget kan inte komplettera med extern information. Det är en styrka ur källtrohetssynpunkt, men kan kännas begränsande om det uppladdade materialet är tunt eller ensidigt. Lösningen är att kombinera NotebookLM med ett annat verktyg – som jag gjorde med Claude – för att berika källmaterialet innan det laddas upp.</p>
+      </div>
+      <div class="analysis-card bad">
+        <div class="ac-label">— Begränsning</div>
+        <h4>Begränsat antal källor i gratisversionen</h4>
+        <p>I gratisversionen finns en gräns för hur många källor du kan ha per notebook och hur många notebooks du kan skapa. För intensiva pluggperioder med många ämnen kan det bli begränsande. Plus-versionen löser det, men det är värt att känna till om man planerar att använda verktyget i stor skala.</p>
+      </div>
+      <div class="analysis-card neutral">
+        <div class="ac-label">→ Observation</div>
+        <h4>Enkelt nog att inte störa flödet</h4>
+        <p>NotebookLM är designat för att vara i vägen så lite som möjligt. Gränssnittet är rent, uppladdning tar sekunder och studiematerialet genereras utan att man behöver skriva avancerade promptar. Det är ett verktyg som faktiskt låter dig fokusera på att lära dig, inte på att hantera verktyget.</p>
+      </div>
+      <div class="analysis-card target full">
+        <div class="ac-label">👥 Målgrupp & jämförelse</div>
+        <h4>Passar studenter – men inte bara dem</h4>
+        <p>NotebookLM passar bäst för <strong>studenter och elever</strong> tack vare sitt inlärningsfokus. Men verktyget kan också vara värdefullt för <strong>lärare</strong> som vill skapa lektionsmaterial utifrån egna dokument, för <strong>journalister</strong> som vill analysera källmaterial, och för <strong>forskare</strong> som behöver strukturera och förhöra sig på långa rapporter. Jämfört med hur jag studerade innan – att läsa och skriva om anteckningar manuellt – är NotebookLM en kvantitativ förbättring: jag lär mig snabbare, repeterar aktivare och behåller information längre.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRISER -->
+<section>
+  <div class="container">
+    <div class="section-label">04 — Prissättning</div>
+    <h2>Kostar det något?</h2>
+    <p>NotebookLM är i grunden <strong>helt gratis</strong> att använda, vilket gör det tillgängligt för alla elever och studenter. Gratisversionen inkluderar tillgång till alla grundläggande funktioner – uppladdning av källor, alla studiemedel som quiz, podcast och tankekarta, samt chattfunktionen med källhänvisningar. För de flesta skolsituationer räcker det gott och väl.</p>
+
+    <p>Plus-versionerna riktar sig till de som behöver mer kapacitet: fler sources per notebook, tillgång till kraftfullare Gemini-modeller, prioriterad åtkomst vid hög belastning och material som genereras <strong>utan vattenstämplar</strong>. Ultra-versionen är troligen mest relevant för professionellt eller akademiskt bruk snarare än gymnasiestudier.</p>
+
+    <div class="pricing-row">
+      <div class="price-card free">
+        <div class="tier">Gratis</div>
+        <div class="price">0 kr<span>/mån</span></div>
+        <p>Alla grundfunktioner. Passar de flesta elever och studenter fullt ut.</p>
+      </div>
+      <div class="price-card">
+        <div class="tier">Plus</div>
+        <div class="price">85 kr<span>/mån</span></div>
+        <p>Fler källor per notebook, bättre Gemini-modell, prioriterad åtkomst och inget vattenmärke.</p>
+      </div>
+      <div class="price-card">
+        <div class="tier">Pro</div>
+        <div class="price">255 kr<span>/mån</span></div>
+        <p>Ytterligare utökad kapacitet för intensiva studier eller professionellt bruk.</p>
+      </div>
+      <div class="price-card">
+        <div class="tier">Ultra</div>
+        <div class="price">3 199 kr<span>/mån</span></div>
+        <p>Maximal kapacitet. Riktar sig till företag, forskare och professionella användare.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <p>Projekt AI-Verktyg · VT 2026 · NotebookLM av Google · <a href="https://notebooklm.google.com" style="color:var(--accent);text-decoration:none;">notebooklm.google.com</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
